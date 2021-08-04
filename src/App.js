@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 // GOOGLE MAPS
 // https://www.npmjs.com/package/google-map-react
 import GoogleMapReact from "google-map-react";
+
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import Container from "react-bootstrap/Container";
@@ -42,9 +43,11 @@ const SearchBox = ({ maps, onPlacesChanged, placeholder }) => {
 
   return <input ref={input} placeholder={placeholder} type="text" />;
 };
-const AnyReactComponent = ({ text }) => <div>{text}</div>;
+const Marker = ({ text }) => {
+  return <div>{text}</div>;
+};
 
-const SimpleMap = ({ handleApiLoaded, coordinates }) => {
+const SimpleMap = ({ handleApiLoaded, coordinates, zoom, locations }) => {
   useEffect(() => {
     console.log("RENDER MAP");
     console.log("COORDS");
@@ -58,69 +61,124 @@ const SimpleMap = ({ handleApiLoaded, coordinates }) => {
           libraries: "places",
         }}
         center={{ lat: coordinates[0], lng: coordinates[1] }}
-        defaultZoom={11}
+        zoom={zoom}
         yesIWantToUseGoogleMapApiInternals
         onGoogleApiLoaded={({ map, maps }) => handleApiLoaded(map, maps)}
       >
-        {/* <AnyReactComponent lat={59.955} lng={30.33} text={"My Marker"} /> */}
+        {locations.map((location, index) => (
+          <Marker
+            key={index}
+            lat={location.geometry.location.lat()}
+            lng={location.geometry.location.lng() }
+            text={"My Marker"}
+          />
+        ))}
       </GoogleMapReact>
     </div>
   );
 };
 
 const App = () => {
-  const [location, setLocation] = useState("");
-  const [apiReady, setApiReady] = useState(false);
-  const [map, setMap] = useState(null);
-  const [coordinates, setCoordinates] = useState([59.95, 30.33]);
-  const [googleMaps, setGoogleMaps] = useState(null);
+  const [apiReady, setApiReady] = useState({
+    map: null,
+    ready: false,
+    googleMaps: null,
+  });
+  const [location, setLocation] = useState({
+    coords: [40.7127753, -74.0059728],
+    zoom: 12,
+  });
+  const [locationList, setLocationList] = useState([]);
+  const [destinationList, setDestinationList] = useState([]);
 
   const handleOnPlacesChanged = (places) => {
     console.log("HANDLE ON PLACES CHANGED APP");
-    const lat = places[0].geometry.location.lat();
-    const lng = places[0].geometry.location.lng();
-    console.log(`LAT: ${lat} LNG: ${lng}`);
-    setCoordinates([lat, lng]);
+
+    if (places) {
+      const lat = places[0].geometry.location.lat();
+      const lng = places[0].geometry.location.lng();
+      console.log(`LAT: ${lat} LNG: ${lng}`);
+      console.log(places);
+      let newZoom;
+      if (
+        places[0].types.includes("locality") ||
+        places[0].types.includes("political")
+      ) {
+        console.log("This is a city");
+        console.log(places[0].types);
+        newZoom = 12;
+        setLocation({
+          coords: [lat, lng],
+          zoom: newZoom,
+        });
+      }
+      // Multiple locations
+      else if (places.length > 1) {
+        setLocationList(places);
+        setLocation((prevState) => ({
+          ...prevState,
+          zoom: newZoom,
+        }));
+      }
+      // Single Location
+      else {
+        console.log("This is not a city");
+        console.log(places[0].types);
+        newZoom = 15;
+        setLocationList(places);
+        setLocation({
+          coords: [lat, lng],
+          zoom: newZoom,
+        });
+      }
+    }
   };
 
   const handleApiLoaded = (map, maps) => {
     if (map && maps) {
-      setMap(map);
-      setGoogleMaps(maps);
-      setApiReady(true);
+      setApiReady({
+        map: map,
+        ready: true,
+        googleMaps: maps,
+      });
     }
   };
   return (
     <>
-      <Navbar bg="light" expand="lg" style={{ borderBottom: "1px solid grey" }}>
-        <Navbar.Brand href="#" className="mx-5">
-          Let's Go
-        </Navbar.Brand>
-        <Navbar.Collapse id="navbarScroll">
-          <Nav
-            className="mr-auto my-2 my-lg-0"
-            style={{ maxHeight: "100px" }}
-            navbarScroll
-          ></Nav>
-          {apiReady && (
-            <SearchBox
-              placeholder={""}
-              onPlacesChanged={handleOnPlacesChanged}
-              maps={googleMaps}
-            />
-          )}
-        </Navbar.Collapse>
-      </Navbar>
       <Container className="m-0">
         <Row>
-          <Col md="10">
+          <Col md="10" className="p-0">
             <SimpleMap
-              coordinates={coordinates}
+              coordinates={location["coords"]}
               handleApiLoaded={handleApiLoaded}
+              zoom={location["zoom"]}
+              locations={locationList}
             />
           </Col>
-          <Col>
-            <h4>Itinerary</h4>
+          <Col md="2" style={{ borderLeft: "1px solid black" }}>
+            <Row>
+              <Col>
+                <h5 className="mt-2">Itinerary</h5>
+                {apiReady && (
+                  <SearchBox
+                    placeholder="Search"
+                    onPlacesChanged={handleOnPlacesChanged}
+                    maps={apiReady["googleMaps"]}
+                  />
+                )}
+              </Col>
+            </Row>
+            <Row>
+              <Col>
+                {/* This should select a starting point */}
+                <h6>Starting Point</h6>
+                <ul>
+                  {destinationList.map((destination) => (
+                    <li>{destination}</li>
+                  ))}
+                </ul>
+              </Col>
+            </Row>
           </Col>
         </Row>
       </Container>
