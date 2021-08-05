@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import Map from './Components/Map'
+import Map from "./Components/Map";
 import SearchBox from "./Components/SearchBox";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import ToggleButton from "react-bootstrap/ToggleButton";
+import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // https://stackoverflow.com/questions/61139662/how-to-implement-google-maps-search-box-in-a-react-application
@@ -22,20 +25,21 @@ const App = () => {
   });
   const [locationList, setLocationList] = useState([]);
   const [destinationList, setDestinationList] = useState([]);
+  const [toggles, setToggles] = useState([]);
 
   const handleOnPlacesChanged = (places) => {
-    console.log("Handle On places changed app")
-    console.log(places)
+    console.log("Handle On places changed app");
+    console.log(places);
     if (!places) {
-      console.log("Places does not exist")
+      console.log("Places does not exist");
       try {
-        console.log("places")
-        console.log(places)
+        console.log("places");
+        console.log(places);
       } catch {
-        console.error("Did not get places!")
+        console.error("Did not get places!");
       }
-      return
-    };
+      return;
+    }
     if (
       places[0].types.includes("locality") ||
       places[0].types.includes("political")
@@ -81,7 +85,7 @@ const App = () => {
         zoom: newZoom,
       });
     } else {
-      console.log("Something Went Wrong!")
+      console.log("Something Went Wrong!");
     }
   };
   const handleApiLoaded = (map, maps) => {
@@ -94,14 +98,13 @@ const App = () => {
     }
   };
   const deleteDestination = (name) => {
-    setDestinationList(destinationList.filter(item => item.name !== name))
-  }
-
+    setDestinationList(destinationList.filter((item) => item.name !== name));
+  };
 
   // We have our destination list. If an item is clicked, then we will change it to a destination marker
   return (
     <>
-      <Container className="m-0">
+      <Container>
         <Row>
           <Col md="10" className="p-0">
             <Map
@@ -109,8 +112,12 @@ const App = () => {
               handleApiLoaded={handleApiLoaded}
               zoom={location["zoom"]}
               locations={locationList}
+              setLocationList={setLocationList}
               setDestinationList={setDestinationList}
               destinations={destinationList}
+              toggles={toggles}
+              googleMaps={apiReady.ready ? apiReady.googleMaps : null}
+              map={apiReady.ready ? apiReady.map : null}
             />
           </Col>
           <Col md="2" style={{ borderLeft: "1px solid black" }}>
@@ -126,32 +133,89 @@ const App = () => {
                   />
                 )}
               </Col>
+              <Col>
+                <CheckBoxGroup setToggles={setToggles} />
+              </Col>
             </Row>
             <Row>
               <Col>
                 {/* This should select a starting point */}
                 <h6>Destinations</h6>
                 <ListGroup>
-
                   {destinationList.map((destination, index) => (
                     <ListGroup.Item key={index}>
                       <Row>
-                        <Col><h6>{destination.name}</h6></Col>
                         <Col>
-                          <Button onClick={() => deleteDestination(destination.name)}>X</Button>
+                          <h6>{destination.name}</h6>
+                        </Col>
+                        <Col>
+                          <Button
+                            onClick={() => deleteDestination(destination.name)}
+                          >
+                            X
+                          </Button>
                         </Col>
                       </Row>
-
                     </ListGroup.Item>
                   ))}
                 </ListGroup>
-
               </Col>
             </Row>
           </Col>
         </Row>
       </Container>
     </>
+  );
+};
+
+const CheckBoxGroup = ({ setToggles }) => {
+  const [value, setValue] = useState([]);
+
+  const radios = [
+    { name: "tourist_attraction", name_simple: "Tourist Attraction" },
+    { name: "restaurant", name_simple: "Food" },
+    { name: "points_of_interest", name_simple: "POI" },
+  ];
+
+  const handleChange = (val) => {
+    // Check if val is empty or not
+    if (val.length !== 0) {
+      console.log("New Toggles!");
+      console.log(val);
+      // Set toggles needs to be a list of items
+      let cleanArray = radios.filter((item, index) => val.includes(index));
+      let toggleArray = cleanArray.map((item) => item.name);
+      setToggles(toggleArray);
+    } else {
+      console.log("Reset Toggles");
+      setToggles([]);
+    }
+    setValue(val);
+    // if (value.length !== 0) {
+    // setToggles(radios[value[0]].name);
+    // }
+  };
+
+  return (
+    <ToggleButtonGroup
+      className="mb-2"
+      type="checkbox"
+      value={value}
+      onChange={handleChange}
+    >
+      {radios.map((radio, index) => (
+        <ToggleButton
+          key={index}
+          id={`tbg-btn-${index}`}
+          value={index}
+          variant={
+            value.includes(index) ? "outline-primary" : "outline-secondary"
+          }
+        >
+          {radio.name_simple}
+        </ToggleButton>
+      ))}
+    </ToggleButtonGroup>
   );
 };
 
